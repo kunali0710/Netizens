@@ -22,7 +22,7 @@ CORS(app, origins=[
 genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
 
 model = genai.GenerativeModel(
-    model_name="models/gemini-1.5-flash-latest",
+    model_name="models/gemini-1.5-flash",
     generation_config={
         "response_mime_type": "application/json"
     }
