@@ -7,7 +7,7 @@ const mammoth = require('mammoth');
 const Groq = require('groq-sdk');
 
 const app = express();
-app.use(cors({ origin: ['http://localhost:5173', 'http://localhost:5174', 'http://127.0.0.1:5173', 'http://127.0.0.1:5174'] }));
+app.use(cors()); // Allows any frontend to connect during deployment
 app.use(express.json());
 
 const upload = multer({
@@ -101,7 +101,7 @@ app.post('/upload', upload.single('resume'), async (req, res) => {
   }
 });
 
-const PORT = 5000;
+const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
 });
