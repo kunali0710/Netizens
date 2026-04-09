@@ -2,7 +2,7 @@ import os
 import json
 import pdfplumber
 import docx
-import google.generativeai as genai
+from groq import Groq
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 from dotenv import load_dotenv
@@ -14,14 +14,9 @@ app = Flask(__name__)
 
 CORS(app, origins="*")
 
-genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
+# Groq client
+client = Groq(api_key=os.getenv("GROQ_API_KEY"))
 
-model = genai.GenerativeModel(
-    model_name="models/gemini-1.5-flash",
-    generation_config={
-        "response_mime_type": "application/json"
-    }
-)
 
 def extract_text_from_pdf(file_bytes):
     text = ""
@@ -47,7 +42,7 @@ def extract_text_from_docx(file_bytes):
         return ""
 
 
-def analyze_resume_with_gemini(resume_text):
+def analyze_resume(resume_text):
     prompt = f"""
     Analyze the resume text and return ONLY a valid JSON object with this structure:
 
@@ -78,20 +73,21 @@ def analyze_resume_with_gemini(resume_text):
     """
 
     try:
-        response = model.generate_content(
-            prompt,
-            request_options={"timeout": 30}
+        completion = client.chat.completions.create(
+            messages=[{"role": "user", "content": prompt}],
+            model="llama3-8b-8192",
         )
 
-        raw_text = response.text.strip()
+        raw_text = completion.choices[0].message.content.strip()
 
+        # clean markdown if present
         if raw_text.startswith("```"):
             raw_text = raw_text.replace("```json", "").replace("```", "").strip()
 
         return json.loads(raw_text)
 
     except Exception as e:
-        print("Gemini error:", e)
+        print("Groq error:", e)
         return {"error": "AI processing failed", "details": str(e)}
 
 
@@ -115,7 +111,7 @@ def upload_resume():
         if len(resume_text) < 20:
             return jsonify({"error": "Text extraction failed"}), 400
 
-        result = analyze_resume_with_gemini(resume_text)
+        result = analyze_resume(resume_text)
 
         if "error" in result:
             return jsonify({
